@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Editor / IDE
+.idea/
+.vscode/
+
+# Claude Code local settings
+.claude/
+
+# Generated outputs
+output/
+
+# OS
+.DS_Store
+Thumbs.db

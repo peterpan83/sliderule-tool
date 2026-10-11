@@ -41,11 +41,18 @@ class TestFromBbox:
         roi = RegionOfInterest.from_bbox(-150.5, 69.0, -148.5, 70.0)
         assert roi.poly == alaska_poly
 
-    def test_toregion_called_with_geojson_dict(self, mock_toregion):
-        RegionOfInterest.from_bbox(0.0, 0.0, 1.0, 1.0)
-        call_args = mock_toregion.call_args[0][0]
-        assert call_args["type"] == "Feature"
-        assert call_args["geometry"]["type"] == "Polygon"
+    def test_toregion_called_with_geodataframe(self, mock_toregion):
+        # sliderule.toregion() rejects a raw GeoJSON Feature dict, so from_bbox
+        # must hand it a GeoDataFrame in EPSG:4326 covering exactly the bbox.
+        import geopandas as gpd
+        from shapely.geometry import box
+
+        RegionOfInterest.from_bbox(-105.3, 68.95, -104.8, 69.15)
+        gdf = mock_toregion.call_args[0][0]
+        assert isinstance(gdf, gpd.GeoDataFrame)
+        assert gdf.crs.to_epsg() == 4326
+        assert len(gdf) == 1
+        assert gdf.geometry.iloc[0].equals(box(-105.3, 68.95, -104.8, 69.15))
 
     def test_bbox_wraps_exception_in_region_error(self):
         with patch("sliderule_tool.core.region.sr.toregion", side_effect=RuntimeError("boom")):

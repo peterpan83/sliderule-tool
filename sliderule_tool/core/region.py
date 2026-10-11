@@ -7,6 +7,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import sliderule as sr
+from shapely.geometry import box
 
 from sliderule_tool.exceptions import RegionError
 
@@ -104,25 +105,11 @@ class RegionOfInterest:
         Raises:
             RegionError: If the bounding box is invalid or cannot be converted.
         """
-        # Build a GeoJSON Feature with a clockwise-wound rectangular polygon.
-        geojson: dict = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [west, south],
-                        [east, south],
-                        [east, north],
-                        [west, north],
-                        [west, south],  # closing vertex
-                    ]
-                ],
-            },
-            "properties": {},
-        }
+        # sliderule.toregion() does not accept a raw GeoJSON Feature dict;
+        # hand it a GeoDataFrame and let it handle polygon winding.
         try:
-            raw = sr.toregion(geojson)
+            gdf = gpd.GeoDataFrame(geometry=[box(west, south, east, north)], crs="EPSG:4326")
+            raw = sr.toregion(gdf)
             return cls(_raw=raw)
         except Exception as e:
             raise RegionError(

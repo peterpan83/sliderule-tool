@@ -59,6 +59,29 @@ class TestFromBbox:
             with pytest.raises(RegionError, match="Failed to create region from bbox"):
                 RegionOfInterest.from_bbox(0.0, 0.0, 1.0, 1.0)
 
+    @pytest.mark.parametrize(
+        "bbox",
+        [
+            (170.0, 60.0, -170.0, 70.0),  # crosses the antimeridian
+            (68.95, -105.3, 69.15, -104.8),  # lat/lon swapped
+            (0.0, 1.0, 1.0, 0.0),  # south > north
+            (0.0, 0.0, 0.0, 1.0),  # zero width
+            (0.0, 1.0, 1.0, 1.0),  # zero height
+            (-181.0, 0.0, 1.0, 1.0),  # lon out of range
+            (0.0, 0.0, 1.0, 91.0),  # lat out of range
+            (float("nan"), 0.0, 1.0, 1.0),
+            ("0", 0.0, 1.0, 1.0),
+        ],
+    )
+    def test_invalid_bbox_raises_before_toregion(self, mock_toregion, bbox):
+        with pytest.raises(RegionError, match="Invalid bbox"):
+            RegionOfInterest.from_bbox(*bbox)
+        mock_toregion.assert_not_called()
+
+    def test_full_globe_bbox_is_valid(self, mock_toregion):
+        RegionOfInterest.from_bbox(-180.0, -90.0, 180.0, 90.0)
+        mock_toregion.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # from_geojson
@@ -137,6 +160,30 @@ class TestPolyProperty:
         roi2 = RegionOfInterest(_raw=raw_dict)
         # get() with default returns _raw itself when 'poly' key missing
         assert roi2.poly == raw_dict
+
+
+# ---------------------------------------------------------------------------
+# equality
+# ---------------------------------------------------------------------------
+
+
+class TestEquality:
+    def test_equal_when_poly_and_raster_match(self):
+        import geopandas as gpd
+
+        # Real toregion() output carries a GeoDataFrame under "gdf"; comparing
+        # it element-wise used to raise "truth value of a DataFrame is ambiguous".
+        a = RegionOfInterest(_raw={**_raw(_make_poly()), "gdf": gpd.GeoDataFrame({"x": [1]})})
+        b = RegionOfInterest(_raw={**_raw(_make_poly()), "gdf": gpd.GeoDataFrame({"x": [1]})})
+        assert a == b
+
+    def test_unequal_when_poly_differs(self):
+        assert RegionOfInterest(_raw=_raw(_make_poly(5))) != RegionOfInterest(
+            _raw=_raw(_make_poly(6))
+        )
+
+    def test_not_equal_to_other_types(self):
+        assert RegionOfInterest(_raw=_raw(_make_poly())) != _raw(_make_poly())
 
 
 # ---------------------------------------------------------------------------

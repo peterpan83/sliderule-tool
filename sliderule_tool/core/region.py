@@ -12,7 +12,7 @@ from shapely.geometry import box
 from sliderule_tool.exceptions import RegionError
 
 
-@dataclass
+@dataclass(eq=False)
 class RegionOfInterest:
     """Wraps the output of ``sliderule.toregion()`` for convenient polygon access.
 
@@ -21,6 +21,13 @@ class RegionOfInterest:
     """
 
     _raw: dict  # output of sliderule.toregion()
+
+    def __eq__(self, other: object) -> bool:
+        # ``_raw`` may hold a GeoDataFrame under "gdf", whose ``==`` is
+        # element-wise, so compare only the parts sent to SlideRule.
+        if not isinstance(other, RegionOfInterest):
+            return NotImplemented
+        return self.poly == other.poly and self.raster == other.raster
 
     # ------------------------------------------------------------------
     # Constructors
@@ -103,8 +110,20 @@ class RegionOfInterest:
             A new :class:`RegionOfInterest` instance.
 
         Raises:
-            RegionError: If the bounding box is invalid or cannot be converted.
+            RegionError: If the bounding box is out of range, empty, crosses the
+                antimeridian (``west > east``), or cannot be converted.
         """
+        try:
+            valid = -180 <= west < east <= 180 and -90 <= south < north <= 90
+        except TypeError:
+            valid = False
+        if not valid:
+            raise RegionError(
+                f"Invalid bbox ({west},{south},{east},{north}): need "
+                "-180 <= west < east <= 180 and -90 <= south < north <= 90 "
+                "(antimeridian-crossing boxes are not supported)"
+            )
+
         # sliderule.toregion() does not accept a raw GeoJSON Feature dict;
         # hand it a GeoDataFrame and let it handle polygon winding.
         try:

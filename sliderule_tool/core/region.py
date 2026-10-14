@@ -104,25 +104,14 @@ class RegionOfInterest:
         Raises:
             RegionError: If the bounding box is invalid or cannot be converted.
         """
-        # Build a GeoJSON Feature with a clockwise-wound rectangular polygon.
-        geojson: dict = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [west, south],
-                        [east, south],
-                        [east, north],
-                        [west, north],
-                        [west, south],  # closing vertex
-                    ]
-                ],
-            },
-            "properties": {},
-        }
+        # sliderule.toregion() no longer accepts an in-memory GeoJSON dict (only a
+        # file path or a GeoDataFrame), so pass the rectangle as a GeoDataFrame.
         try:
-            raw = sr.toregion(geojson)
+            from shapely.geometry import Polygon
+
+            ring = [(west, south), (east, south), (east, north), (west, north), (west, south)]
+            gdf = gpd.GeoDataFrame(geometry=[Polygon(ring)], crs="EPSG:4326")
+            raw = sr.toregion(gdf)
             return cls(_raw=raw)
         except Exception as e:
             raise RegionError(

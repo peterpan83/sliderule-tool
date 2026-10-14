@@ -204,7 +204,10 @@ class ATL24Params(BaseParams):
                 "res": self.res,
                 "srt": self.srt,
                 "cnf": self.cnf,
-                "atl24_class": self.atl24_class,
+                # The atl24x endpoint reads the class filter from atl24.class_ph;
+                # a top-level "atl24_class" key is silently ignored (server then
+                # returns only its default class, bathymetry).
+                "atl24": {"class_ph": list(self.atl24_class)},
             }
         )
         return d

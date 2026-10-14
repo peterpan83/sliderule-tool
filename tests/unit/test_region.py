@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import geopandas as gpd
 import pytest
 
 from sliderule_tool.core.region import RegionOfInterest
@@ -41,11 +42,12 @@ class TestFromBbox:
         roi = RegionOfInterest.from_bbox(-150.5, 69.0, -148.5, 70.0)
         assert roi.poly == alaska_poly
 
-    def test_toregion_called_with_geojson_dict(self, mock_toregion):
+    def test_toregion_called_with_geodataframe(self, mock_toregion):
         RegionOfInterest.from_bbox(0.0, 0.0, 1.0, 1.0)
         call_args = mock_toregion.call_args[0][0]
-        assert call_args["type"] == "Feature"
-        assert call_args["geometry"]["type"] == "Polygon"
+        assert isinstance(call_args, gpd.GeoDataFrame)
+        assert call_args.geometry.iloc[0].geom_type == "Polygon"
+        assert call_args.total_bounds.tolist() == [0.0, 0.0, 1.0, 1.0]
 
     def test_bbox_wraps_exception_in_region_error(self):
         with patch("sliderule_tool.core.region.sr.toregion", side_effect=RuntimeError("boom")):

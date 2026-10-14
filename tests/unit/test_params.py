@@ -12,6 +12,7 @@ from sliderule_tool.datasets.icesat2.params import (
     ATL03xSurfaceParams,
     ATL06Params,
     ATL08Params,
+    ATL24Params,
     ICESat2BaseParams,
     VALID_ATL08_CLASSES,
 )
@@ -143,6 +144,22 @@ class TestATL03Params:
 class TestATL08Params:
     def test_is_subclass_of_icesat2_base(self):
         assert issubclass(ATL08Params, ICESat2BaseParams)
+
+
+class TestATL24Params:
+    def test_class_filter_sent_as_atl24_class_ph(self):
+        # the atl24x endpoint only honours atl24.class_ph; a top-level atl24_class is ignored
+        d = ATL24Params(region=_roi(), atl24_class=["sea_surface"]).to_dict()
+        assert d["atl24"] == {"class_ph": ["sea_surface"]}
+        assert "atl24_class" not in d
+
+    def test_default_classes(self):
+        d = ATL24Params(region=_roi()).to_dict()
+        assert d["atl24"]["class_ph"] == ["bathymetry", "sea_surface"]
+
+    def test_invalid_class_raises(self):
+        with pytest.raises(ParameterError, match="Invalid atl24_class"):
+            ATL24Params(region=_roi(), atl24_class=["land"]).validate()
 
 
 class TestATL03xSurfaceParams:
